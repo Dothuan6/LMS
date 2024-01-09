@@ -1,12 +1,12 @@
 require('dotenv').config();
 import express,{NextFunction,Request,Response} from "express";
-
 export const app = express();
-
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import ErrorHandler from "./utils/ErrorHandler";
-import { ErrorMiddleware } from "./middleware/error";
+import {ErrorMiddleware} from "./middleware/error";
+import userRouter from './routes/user.route';
+
+
 //body parser
 app.use(express.json({limit: '50mb'}));
 
@@ -17,6 +17,8 @@ app.use(cookieParser());
 app.use(cors({
     origin: process.env.ORIGIN
 }));
+
+app.use("/api/v1",userRouter);
 
 //testing api
 app.get("/test",(req,res,next)=> {
