@@ -14,6 +14,9 @@ import {
 } from "../utils/jwt";
 import { redis } from "../utils/redis";
 import { request } from "http";
+import { getUserById } from "../services/user.service";
+import { NetConnectOpts } from "net";
+import cloudinary from "cloudinary";
 declare global {
   namespace Express {
     interface Request {
@@ -35,9 +38,9 @@ export const registrationUser = CatchAsyncError(
     try {
       const { name, email, password } = req.body;
 
-      const isEmailExit = await userModel.findOne({ email });
+      const isEmailExist = await userModel.findOne({ email });
 
-      if (isEmailExit) {
+      if (isEmailExist) {
         return next(new ErrorHandler("email already exits", 400));
       }
       const user: IRegistrationBody = {
@@ -218,12 +221,169 @@ export const updateAccessToken = CatchAsyncError(
           expiresIn: "3d",
         }
       );
+      req.user = user;
 
       res.cookie("access_token", accessToken, accessTokenOptions);
       res.cookie("refresh_token", refreshToken, refreshTokenOptions);
       res.status(200).json({
         status: "success",
         accessToken,
+      });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  }
+);
+
+//get user info
+export const getUserInfo = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user?._id;
+      getUserById(userId, res);
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 404));
+    }
+  }
+);
+
+interface ISocialAuthBody {
+  email: string;
+  name: string;
+  avatar: string;
+}
+//social auth
+export const socialAuth = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { email, name, avatar } = req.body;
+      const user = await userModel.findOne({ email });
+      if (!user) {
+        const newUser = await userModel.create({ email, name, avatar });
+        sendToken(newUser, 200, res);
+      } else {
+        sendToken(user, 200, res);
+      }
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 404));
+    }
+  }
+);
+
+//update user info
+interface IUpdateUserInfo {
+  name?: string;
+  email?: string;
+}
+
+export const updateUserInfo = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { name, email } = req.body as IUpdateUserInfo;
+      const userId = req.user?._id;
+      const user = await userModel.findById(userId);
+
+      if (email && user) {
+        const isEmailExist = await userModel.findOne({ email });
+        if (isEmailExist) {
+          return next(new ErrorHandler("Email đã tồn tại", 400));
+        }
+
+        user.email = email;
+      }
+      if (name && user) {
+        user.name = name;
+      }
+      await user?.save();
+      await redis.set(userId, JSON.stringify(user));
+
+      res.status(201).json({
+        success: true,
+        user,
+      });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 404));
+    }
+  }
+);
+
+//update user pass
+interface IUpdateUserPassword {
+  oldPassword: string;
+  newPassword: string;
+}
+export const updatePassword = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { oldPassword, newPassword } = req.body as IUpdateUserPassword;
+      const user = await userModel.findById(req.user?._id).select("+password");
+
+      if (!oldPassword || !newPassword) {
+        return next(
+          new ErrorHandler(
+            "Vui Lòng nhập vào đầy đủ mật khẩu cũ và mật khẩu mới",
+            400
+          )
+        );
+      }
+
+      if (user?.password === undefined) {
+        return next(new ErrorHandler("Người dùng không hợp lệ", 400));
+      }
+      const isPasswordMatch = await user?.comparePassword(oldPassword);
+      if (!isPasswordMatch) {
+        return next(new ErrorHandler("Mật khẩu cũ không khớp", 400));
+      }
+
+      user.password = newPassword;
+      await user.save();
+      await redis.set(req.user?._id, JSON.stringify(user));
+      res.status(201).json({
+        success: true,
+        user,
+      });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  }
+);
+
+//update proflie picture
+interface IUpdateProfilePicture {
+  avatar: string;
+}
+export const updateProfilePicture = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { avatar } = req.body;
+      const userId = req.user?._id;
+      const user = await userModel.findById(userId);
+
+      if (avatar && user) {
+        //if user have one avatar them call this if
+        if (user?.avatar?.public_id) {
+          //first delete the old image
+          //gọi hàm destroy của uploader, hàm này xóa tệp hoặc ảnh từ cloudinay,
+          //nếu user avatar public có giá trị khác null thì sẽ destroy, bất kì thăng nào null thì undefi
+          await cloudinary.v2.uploader.destroy(user?.avatar?.public_id);
+        } else {
+          const myCloud = await cloudinary.v2.uploader.upload(avatar, {
+            folder: "avatars",
+            width: 150,
+          });
+          user.avatar = {
+            public_id: myCloud.public_id,
+            url: myCloud.secure_url,
+          };
+        }
+      }
+      await user?.save();
+
+      await redis.set(userId, JSON.stringify(user));
+
+      res.status(200).json({
+        success: true,
+        user,
       });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));

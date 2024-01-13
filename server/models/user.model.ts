@@ -39,7 +39,6 @@ const userSchema: Schema<IUser> = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: [true, "Vui lòng nhập vào mật khẩu của bạn"],
       minlength: [6, "Mật khẩu bần ít hơn 6 kí tự"],
       select: false,
     },
