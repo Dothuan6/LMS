@@ -279,3 +279,111 @@ export const addAnswer = CatchAsyncError(
     }
   }
 );
+
+//add review in course
+interface IAddReviewData {
+  review: string;
+  courseId: string;
+  rating: number;
+  userId: string;
+}
+
+export const addReview = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userCourseList = req.user?.courses;
+      //lấy tham số ID qua url được truyền
+      const courseId = req.params.id;
+
+      //check nếu courseId đã tồn tại trong khóa học dựa vào _Id
+      const courseExists = userCourseList?.some(
+        (course: any) => course._id.toString() === courseId.toString()
+      );
+
+      if (!courseExists) {
+        return next(
+          new ErrorHandler(
+            "Bạn chưa được cấp quyền truy cập vào khóa học này",
+            404
+          )
+        );
+      }
+      const course = await CourseModel.findById(courseId);
+
+      const { review, rating } = req.body as IAddReviewData;
+
+      const reviewData: any = {
+        user: req.user,
+        review,
+        rating,
+        Comment: review,
+      };
+      course?.reviews.push(reviewData);
+
+      let avg = 0;
+      course?.reviews.forEach((rev: any) => {
+        avg += rev.rating;
+      });
+
+      if (course) {
+        course.ratings = avg / course.reviews.length;
+      }
+
+      await course?.save();
+
+      const notification = {
+        title: "Đánh giá mới đã được nhận",
+        message: `${req.user?.name} đã đăng 1 đánh giá trong ${course?.name}`,
+      };
+      //create notifi
+      res.status(200).json({
+        success: true,
+        course,
+      });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  }
+);
+
+//add reply in review
+
+interface IAddReviewData {
+  comment: string;
+  courseId: string;
+  reviewId: string;
+}
+export const addReplyToReview = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { comment, courseId, reviewId } = req.body as IAddReviewData;
+      const course = await CourseModel.findById(courseId);
+      if (!course) {
+        return next(new ErrorHandler("Không tìm thấy khóa học", 404));
+      }
+      const review = course?.reviews?.find(
+        (rev: any) => rev._id.toString() === reviewId
+      );
+
+      if (!review) {
+        return next(new ErrorHandler("Không tìm thấy đánh giá", 400));
+      }
+      const replyData: any = {
+        user: req.user,
+        comment,
+      };
+      if (!review.commenReplies) {
+        review.commenReplies = [];
+      }
+      review.commenReplies?.push(replyData);
+      await course?.save();
+
+      res.status(200).json({
+        success: true,
+        course,
+      });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  }
+);
