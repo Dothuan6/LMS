@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Order Confirmation</title>
+    <!-- Add your CSS stylesheets or link to a CDN if needed -->
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        color: #333;
+        margin: 0;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        color: #007bff;
+      }
+
+      p {
+        margin-bottom: 20px;
+      }
+
+      .order-details {
+        border-top: 2px solid #ddd;
+        margin-top: 20px;
+        padding-top: 20px;
+      }
+
+      /* Add any additional styling as needed */
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Đơn đặt khóa học của bạn đã được xác nhận!</h1>
+      <p>
+        Chúng tôi cảm ơn bạn vì đã tin tưởng. Dưới đây là thông tin chi tiết cho
+        hóa đơn của bạn:
+      </p>
+
+      <div class="order-details">
+        <table style="border-bottom: 1px solid #0000002f">
+          <tr>
+            <td>Order #: <%= order._id %></td>
+            <td>Order Date: <%= order.date %></td>
+          </tr>
+        </table>
+        <table style="width: 90%; margin: auto; display: block">
+          <tr>
+            <td>Item</td>
+            <td>Qty</td>
+            <td>Cost</td>
+          </tr>
+        </table>
+        <table style="width: 90%; margin: auto; display: block">
+          <tr>
+            <td><%= order.name %></td>
+            <td><%= 1 %></td>
+            <td><%= order.price %></td>
+          </tr>
+        </table>
+        <table>
+          <tr>
+            <td>Subtotal:</td>
+            <td><%= order.price %></td>
+          </tr>
+        </table>
+        <table>
+          <tr>
+            <td>Total:</td>
+            <td><%= order.price %></td>
+          </tr>
+        </table>
+      </div>
+      <p>Thank you for shopping with us!</p>
+      <p>Best regards,<br />Your Company Name</p>
+    </div>
+  </body>
+</html>
