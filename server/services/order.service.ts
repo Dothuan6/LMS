@@ -13,3 +13,13 @@ export const newOrder = CatchAsyncError(
     });
   }
 );
+//get all order
+export const getAllOrdersService = async (res: Response) => {
+  const users = await OrderModel.find().sort({
+    createAt: -1,
+  });
+  res.status(201).json({
+    success: true,
+    users,
+  });
+};

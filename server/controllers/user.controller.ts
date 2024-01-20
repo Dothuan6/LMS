@@ -14,7 +14,11 @@ import {
 } from "../utils/jwt";
 import { redis } from "../utils/redis";
 import { request } from "http";
-import { getUserById } from "../services/user.service";
+import {
+  getAllUsersService,
+  getUserById,
+  updateUserRoleService,
+} from "../services/user.service";
 import { NetConnectOpts } from "net";
 import cloudinary from "cloudinary";
 declare global {
@@ -384,6 +388,50 @@ export const updateProfilePicture = CatchAsyncError(
       res.status(200).json({
         success: true,
         user,
+      });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  }
+);
+
+//get all user -- onl for admin
+export const getAllUsers = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      getAllUsersService(res);
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  }
+);
+
+//update user role -- only for admin
+export const updateUserRole = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id, role } = req.body;
+      updateUserRoleService(res, id, role);
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  }
+);
+
+//delete user -- admin
+export const deleteUser = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      const user = await userModel.findById(id);
+      if (!user) {
+        return next(new ErrorHandler("Không tìm thấy người dùng ", 400));
+      }
+      await user.deleteOne({ id });
+      await redis.del(id);
+      res.status(201).json({
+        success: true,
+        message: " Người dùng đã được xóa thành công",
       });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));

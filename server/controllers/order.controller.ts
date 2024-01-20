@@ -8,7 +8,7 @@ import path from "path";
 import ejs from "ejs";
 import sendMail from "../utils/sendMail";
 import NotificationModel from "../models/notificationModel";
-import { newOrder } from "../services/order.service";
+import { getAllOrdersService, newOrder } from "../services/order.service";
 
 //create order
 export const createOrder = CatchAsyncError(
@@ -70,6 +70,17 @@ export const createOrder = CatchAsyncError(
       course?.purchased ? course.purchased++ : (course.purchased = 1);
       await course.save();
       newOrder(data, res, next);
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  }
+);
+//get all orders  admin
+export const getAllOrders = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const resp = res as any;
+      getAllOrdersService(resp);
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));
     }

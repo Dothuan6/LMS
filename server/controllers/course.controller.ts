@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { CatchAsyncError } from "../middleware/catchAsyncError";
 import ErrorHandler from "../utils/ErrorHandler";
 import cloudinary from "cloudinary";
-import { createCourse } from "../services/course.service";
+import { createCourse, getAllCoursesService } from "../services/course.service";
 import CourseModel from "../models/course.model";
 import { redis } from "../utils/redis";
 import mongoose from "mongoose";
@@ -10,6 +10,7 @@ import { error } from "console";
 import ejs from "ejs";
 import path from "path";
 import sendMail from "../utils/sendMail";
+import NotificationModel from "../models/notificationModel";
 
 //upload course
 export const uploadCourse = CatchAsyncError(
@@ -189,7 +190,11 @@ export const addQuestion = CatchAsyncError(
       };
       //thêm câu hỏi vào course content
       courseContent.questions.push(newQuestion);
-
+      await NotificationModel.create({
+        user: req.user?._id,
+        title: "Câu hỏi mới nhận được",
+        message: `Bạn có câu hỏi mới từ ${courseContent.title}`,
+      });
       //lưu lại
       await course?.save();
       res.status(200).json({
@@ -250,6 +255,11 @@ export const addAnswer = CatchAsyncError(
 
       if (req.user?._id === question.user._id) {
         //create a notification
+        await NotificationModel.create({
+          user: req.user?._id,
+          title: "Có câu trả lời mới được nhận",
+          message: `Bạn có câu trả lời mới được nhận từ ${courseContent.title}`,
+        });
       } else {
         const data = {
           name: question.user.name,
@@ -381,6 +391,38 @@ export const addReplyToReview = CatchAsyncError(
       res.status(200).json({
         success: true,
         course,
+      });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  }
+);
+
+//get all course  admin
+export const getAllCourses = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      getAllCoursesService(res);
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  }
+);
+
+//delete course -- admin
+export const deleteCourse = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      const course = await CourseModel.findById(id);
+      if (!course) {
+        return next(new ErrorHandler("Không tìm thấy khóa học", 400));
+      }
+      await course.deleteOne({ id });
+      await redis.del(id);
+      res.status(201).json({
+        success: true,
+        message: " Khóa học đã được xóa thành công",
       });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));
