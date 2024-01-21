@@ -1,8 +1,10 @@
 import { Document, Model } from "mongoose";
+
 //cấu trúc đối tượng dữ liệu mỗi tháng
+
 interface MonthData {
-  month: string; // tên tháng
-  count: number; // số lượng trong tháng
+  tháng: string; // tên tháng
+  tổng: number; // số lượng trong tháng
 }
 export async function generateLast12Mothsdata<T extends Document>(
   model: Model<T>
@@ -40,7 +42,7 @@ export async function generateLast12Mothsdata<T extends Document>(
       },
     });
     //thêm đối tượng monthYear, count vào lastMonths : là kiểu dữ liệu trả về của promise
-    last12Months.push({ month: monthYear, count });
+    last12Months.push({ tháng: monthYear, tổng: count });
   }
   return { last12Months }; // trả về last12Monthss
 }
