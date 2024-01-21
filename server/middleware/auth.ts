@@ -32,7 +32,9 @@ export const isAutheticated = CatchAsyncError(
     const user = await redis.get(decoded.id);
 
     if (!user) {
-      return next(new ErrorHandler("Không tìm thấy người dùng", 404));
+      return next(
+        new ErrorHandler("Vui lòng đăng nhập để truy cập vào khóa học này", 404)
+      );
     }
     // @types/custom.d.ts -> user
     req.user = JSON.parse(user);
