@@ -42,5 +42,5 @@ export async function generateLast12Mothsdata<T extends Document>(
     //thêm đối tượng monthYear, count vào lastMonths : là kiểu dữ liệu trả về của promise
     last12Months.push({ month: monthYear, count });
   }
-  return { last12Months }; // trả về last12Months
+  return { last12Months }; // trả về last12Monthss
 }
